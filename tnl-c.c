@@ -57,9 +57,9 @@ int receive_i6addrs(struct nl_msg *msg, void *arg) {
 }
 
 /*
-* Find the master INET6 address.
+* Finds the master INET6 address. Returned structure must be freed after use.
 */
-struct in6_addr* find_master_addr(struct nl_sock* socket, unsigned int idx) {
+struct in6_addr* find_master_addr(struct nl_sock* socket) {
     struct nl_msg* msg = nlmsg_alloc();
 
     struct nlmsghdr* hdr = nlmsg_put(
@@ -74,7 +74,6 @@ struct in6_addr* find_master_addr(struct nl_sock* socket, unsigned int idx) {
     struct ifaddrmsg addrmsg;
     memset(&addrmsg, 0, sizeof(struct ifaddrmsg));
     addrmsg.ifa_family = AF_INET6;
-    addrmsg.ifa_index = idx;
 
     memcpy(nlmsg_data(hdr), &addrmsg, sizeof(struct ifaddrmsg));
 
@@ -129,7 +128,7 @@ int main() {
     struct nl_sock* socket = nl_socket_alloc();
     nl_connect(socket, NETLINK_ROUTE);
 
-    struct in6_addr* local = find_master_addr(socket, 2);
+    struct in6_addr* local = find_master_addr(socket);
 
     create_tunnel(socket, local);
 
