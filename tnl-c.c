@@ -1,3 +1,5 @@
+#include "tnl-c.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
@@ -13,7 +15,6 @@
 
 const int ERROR = -1;
 const char LOCAL_IPv6[] = "fd84:c300:ca02:76d2::1";
-const char REMOTE_IPv6[] = "fd84:c300:ca02:76d2::2";
 const char TUN_NAME[] = "ip6tun0";
 
 int receive_i6addrs(struct nl_msg *msg, void *arg) {
@@ -130,7 +131,7 @@ void assign_address(const char* tunnel_name, struct in6_addr* addr) {
     nl_socket_free(socket);
 }
 
-int create_tunnel(struct nl_sock* socket, struct in6_addr* local) {
+int create_tunnel(struct nl_sock* socket, struct in6_addr* local, struct in6_addr* remote) {
     struct rtnl_link* tunnel = rtnl_link_ip6_tnl_alloc();
 
     int eth0 = find_ifidx(socket, "enp0s3");
@@ -145,42 +146,21 @@ int create_tunnel(struct nl_sock* socket, struct in6_addr* local) {
     rtnl_link_set_flags(tunnel, IFF_UP);
     rtnl_link_ip6_tnl_set_proto(tunnel, IPPROTO_IPV6);
 
-    //Build required addresses
-    struct in6_addr* rem = malloc(sizeof(struct in6_addr));
-    inet_pton(AF_INET6, REMOTE_IPv6, rem);
-
     rtnl_link_ip6_tnl_set_local(tunnel, local);
-    rtnl_link_ip6_tnl_set_remote(tunnel, rem);
+    rtnl_link_ip6_tnl_set_remote(tunnel, remote);
 
     if(rtnl_link_add(socket, tunnel, NLM_F_CREATE) < 0) {
         perror("Could not create link!");
         rtnl_link_put(tunnel);
-        free(rem);
         return ERROR;
     }
 
     rtnl_link_put(tunnel);
-    free(rem);
 
     struct in6_addr tunnel_ip;
     inet_pton(AF_INET6, LOCAL_IPv6, &tunnel_ip);
     assign_address(TUN_NAME, &tunnel_ip);
 
     printf("Tunnel successfully created!\n");
-    return 0;
-}
-
-int main() {
-    struct nl_sock* socket = nl_socket_alloc();
-    nl_connect(socket, NETLINK_ROUTE);
-
-    //MAXIMIZER
-    struct in6_addr* local = find_master_addr(socket);
-    create_tunnel(socket, local);
-
-    free(local);
-    nl_close(socket);
-    nl_socket_free(socket);
-
     return 0;
 }
