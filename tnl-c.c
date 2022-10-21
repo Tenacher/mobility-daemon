@@ -14,7 +14,6 @@
 #include <netlink/route/link/ip6tnl.h>
 
 const int ERROR = -1;
-const char LOCAL_IPv6[] = "fd84:c300:ca02:76d2::1";
 const char TUN_NAME[] = "ip6tun0";
 
 int receive_i6addrs(struct nl_msg *msg, void *arg) {
@@ -40,7 +39,10 @@ int receive_i6addrs(struct nl_msg *msg, void *arg) {
 /*
 * Finds the master INET6 address. Returned structure must be freed after use.
 */
-struct in6_addr* find_master_addr(struct nl_sock* socket) {
+struct in6_addr* find_master_addr() {
+    struct nl_sock* socket = nl_socket_alloc();
+    nl_connect(socket, NETLINK_ROUTE);
+
     struct nl_msg* msg = nlmsg_alloc();
 
     struct nlmsghdr* hdr = nlmsg_put(
@@ -66,6 +68,8 @@ struct in6_addr* find_master_addr(struct nl_sock* socket) {
     nl_socket_modify_cb(socket, NL_CB_VALID, NL_CB_CUSTOM, &receive_i6addrs, addr);
     nl_recvmsgs_default(socket);
 
+    nl_close(socket);
+    nl_socket_free(socket);
     return addr;
 }
 
@@ -131,7 +135,7 @@ void assign_address(const char* tunnel_name, struct in6_addr* addr) {
     nl_socket_free(socket);
 }
 
-int create_tunnel(struct nl_sock* socket, struct in6_addr* local, struct in6_addr* remote) {
+int create_tunnel(struct in6_addr* local, struct in6_addr* remote, struct in6_addr* tun_addr) {
     struct rtnl_link* tunnel = rtnl_link_ip6_tnl_alloc();
 
     int eth0 = find_ifidx(socket, "enp0s3");
@@ -141,25 +145,31 @@ int create_tunnel(struct nl_sock* socket, struct in6_addr* local, struct in6_add
         return ERROR;
     }
 
+    //Set tunnel parameters
     rtnl_link_set_name(tunnel, TUN_NAME);
     rtnl_link_set_link(tunnel, eth0); //Set default link as the master device
     rtnl_link_set_flags(tunnel, IFF_UP);
     rtnl_link_ip6_tnl_set_proto(tunnel, IPPROTO_IPV6);
-
     rtnl_link_ip6_tnl_set_local(tunnel, local);
     rtnl_link_ip6_tnl_set_remote(tunnel, remote);
+
+    struct nl_sock* socket = nl_socket_alloc();
+    nl_connect(socket, NETLINK_ROUTE);
 
     if(rtnl_link_add(socket, tunnel, NLM_F_CREATE) < 0) {
         perror("Could not create link!");
         rtnl_link_put(tunnel);
+        nl_close(socket);
+        nl_socket_free(socket);
         return ERROR;
     }
 
     rtnl_link_put(tunnel);
+    nl_close(socket);
+    nl_socket_free(socket);
 
-    struct in6_addr tunnel_ip;
-    inet_pton(AF_INET6, LOCAL_IPv6, &tunnel_ip);
-    assign_address(TUN_NAME, &tunnel_ip);
+    // Lastly, assign an IPv6 address to the tunnel
+    assign_address(TUN_NAME, tun_addr);
 
     printf("Tunnel successfully created!\n");
     return 0;

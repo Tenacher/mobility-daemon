@@ -1,15 +1,12 @@
-#ifndef SNIFFER
-#define SNIFFER
+#ifndef SNIFFER_H
+#define SNIFFER_H
 
-typedef enum {
-    BU,
-    B_ACK
-} MobilityHeaderType;
+#include "mobi-packets.h"
 
 /*
 *  Wait for a packet of specified type,
 *  then return it via the buffer.
 */
-int sniff_for(MobilityHeaderType type, char* buffer);
+int sniff_for(MobilityHeaderType mh_type, char* buffer, struct in6_addr* source);
 
 #endif
