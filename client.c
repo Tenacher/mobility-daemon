@@ -11,7 +11,7 @@
 
 const char CLIENT_IPV6[] = "fd84:c300:ca02:76d2::2";
 
-int send_ack(uint8_t* msg, int bytes, struct in6_addr* receiver) {
+int send_update(uint8_t* msg, int bytes, struct in6_addr* receiver) {
     int sock = socket(AF_INET6, SOCK_RAW, IPPROTO_MH);
     if(sock < 0) {
         perror("Failed to create socket!");
