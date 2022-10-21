@@ -8,6 +8,11 @@ typedef enum {
     B_ACK = 6 // Binding Acknowledgement MH Type
 } MobilityHeaderType;
 
+const uint8_t BU_ACK_REQ = (1 << 7); // Binding Acknowledgement requested
+const uint8_t BU_HOME_REG = (1 << 6); // Home Registration message
+
+const uint8_t BU_ACCEPTED = 0; // Binding Update accepted status
+
 struct ip6_mh {
 	uint8_t	ip6mh_proto;
 	uint8_t	ip6mh_hdrlen;

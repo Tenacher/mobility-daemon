@@ -28,4 +28,25 @@ uint8_t* create_binding_ack(uint16_t sequence) {
     return msg;
 }
 
+uint8_t* create_binding_update() {
+    uint8_t* msg = malloc(16);
 
+    struct ip6_mh* mh = (struct ip6_mh*) msg;
+    mh->ip6mh_proto = 59;
+    mh->ip6mh_hdrlen = 1;
+    mh->ip6mh_type = 5;
+    mh->ip6mh_reserved = 0;
+    mh->ip6mh_cksum = 0;
+
+    struct mh_bu* bu = (struct mh_bu*) mh->payload;
+    bu->sequence = 50;
+    bu->status_bits = BU_ACK_REQ | BU_HOME_REG;
+    bu->lifetime = 16;
+    
+    struct mo_padn* padding = (struct mo_padn*) bu->options;
+    padding->type = 1;
+    padding->len = 2;
+    memset(padding->pad, 0, 2);
+
+    return msg;
+}
