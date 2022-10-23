@@ -2,16 +2,17 @@
 #define MOBI_PACKETS_H
 
 #include <stdint.h>
+#include <linux/in6.h>
 
 typedef enum {
     BU = 5, // Binding Update message MH Type
     B_ACK = 6 // Binding Acknowledgement MH Type
 } MobilityHeaderType;
 
-const uint8_t BU_ACK_REQ = (1 << 7); // Binding Acknowledgement requested
-const uint8_t BU_HOME_REG = (1 << 6); // Home Registration message
+static const uint8_t BU_ACK_REQ = (1 << 7); // Binding Acknowledgement requested
+static const uint8_t BU_HOME_REG = (1 << 6); // Home Registration message
 
-const uint8_t BU_ACCEPTED = 0; // Binding Update accepted status
+static const uint8_t BU_ACCEPTED = 0; // Binding Update accepted status
 
 struct ip6_mh {
 	uint8_t	ip6mh_proto;
@@ -48,5 +49,9 @@ struct mo_padn {
 * Needs to be freed after use.
 */
 uint8_t* create_binding_ack(uint16_t sequence);
+
+uint8_t* create_binding_update();
+
+int send_mo_msg(uint8_t* msg, int bytes, struct in6_addr* receiver);
 
 #endif

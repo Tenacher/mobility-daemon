@@ -1,7 +1,10 @@
-#include "mobi-packets.h"
-
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+#include "mobi-packets.h"
 
 uint8_t* create_binding_ack(uint16_t sequence) {
     uint8_t* msg = malloc(16);
@@ -49,4 +52,32 @@ uint8_t* create_binding_update() {
     memset(padding->pad, 0, 2);
 
     return msg;
+}
+
+int send_mo_msg(uint8_t* msg, int bytes, struct in6_addr* receiver) {
+    int sock = socket(AF_INET6, SOCK_RAW, IPPROTO_MH);
+    if(sock < 0) {
+        perror("Failed to create socket!");
+        return -1;
+    }
+
+    int offset = 2;
+    if(setsockopt(sock, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(int)) < 0) {
+        perror("Couldn't set option!");
+        return -1;
+    }
+
+    struct sockaddr_in6 s_addr;
+    s_addr.sin6_family = AF_INET6;
+    memcpy(&s_addr.sin6_addr, receiver, sizeof(struct in6_addr));
+
+    ssize_t bytes_sent = sendto(sock, msg, bytes, 0, (struct sockaddr*) &s_addr, sizeof(struct sockaddr));
+    if(bytes_sent < bytes) {
+        printf("Bytes sent is less than bytes received. %ld < %d\n", bytes_sent, bytes);
+        shutdown(sock, SHUT_RDWR);
+        return -1;
+    }
+
+    shutdown(sock, SHUT_RDWR);
+    return 0;
 }

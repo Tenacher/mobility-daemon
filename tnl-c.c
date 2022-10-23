@@ -1,9 +1,6 @@
-#include "tnl-c.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <netinet/in.h>
 #include <linux/ip.h>
 #include <linux/if.h>
 #include <netlink/netlink.h>
@@ -12,6 +9,8 @@
 #include <netlink/route/link.h>
 #include <netlink/route/addr.h>
 #include <netlink/route/link/ip6tnl.h>
+
+#include "tnl-c.h"
 
 const int ERROR = -1;
 const char TUN_NAME[] = "ip6tun0";
@@ -136,9 +135,11 @@ void assign_address(const char* tunnel_name, struct in6_addr* addr) {
 }
 
 int create_tunnel(struct in6_addr* local, struct in6_addr* remote, struct in6_addr* tun_addr) {
+    struct nl_sock* socket = nl_socket_alloc();
+    nl_connect(socket, NETLINK_ROUTE);
     struct rtnl_link* tunnel = rtnl_link_ip6_tnl_alloc();
 
-    int eth0 = find_ifidx(socket, "enp0s3");
+    int eth0 = find_ifidx(socket, "eth0");
     if(eth0 < 0) {
         perror("Error finding master device!");
         rtnl_link_put(tunnel);
@@ -152,9 +153,6 @@ int create_tunnel(struct in6_addr* local, struct in6_addr* remote, struct in6_ad
     rtnl_link_ip6_tnl_set_proto(tunnel, IPPROTO_IPV6);
     rtnl_link_ip6_tnl_set_local(tunnel, local);
     rtnl_link_ip6_tnl_set_remote(tunnel, remote);
-
-    struct nl_sock* socket = nl_socket_alloc();
-    nl_connect(socket, NETLINK_ROUTE);
 
     if(rtnl_link_add(socket, tunnel, NLM_F_CREATE) < 0) {
         perror("Could not create link!");
