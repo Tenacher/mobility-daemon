@@ -17,6 +17,28 @@
 
 const int ERROR = -1;
 const char TUN_NAME[] = "ip6tun0";
+const char master_dev[] = "eth0";
+
+/*
+* Finds device ifidx by name.
+*/
+int find_ifidx(struct nl_sock* socket, const char* name) {
+    struct nl_cache* link_cache = NULL;
+    if(rtnl_link_alloc_cache(socket, AF_UNSPEC, &link_cache) < 0) {
+        perror("Could not allocate link cache!");
+        return ERROR;
+    }
+
+    int eth0 = 0;
+    if (!(eth0 = rtnl_link_name2i(link_cache, name))) {
+        perror("Could not find master device!");
+        nl_cache_put(link_cache);
+        return ERROR;
+    }
+
+    nl_cache_put(link_cache);
+    return eth0;
+}
 
 struct cb_args {
     int l_idx;
@@ -73,7 +95,7 @@ struct in6_addr* find_master_addr() {
 
     struct cb_args find_params;
     find_params.found = false;
-    find_params.l_idx = 2;
+    find_params.l_idx = find_ifidx(socket, master_dev);
     struct in6_addr* found = malloc(sizeof(struct in6_addr));
     memset(found, 0, sizeof(struct in6_addr));
     find_params.addr = found;
@@ -87,27 +109,6 @@ struct in6_addr* find_master_addr() {
     nl_close(socket);
     nl_socket_free(socket);
     return found;
-}
-
-/*
-* Finds device ifidx by name.
-*/
-int find_ifidx(struct nl_sock* socket, const char* name) {
-    struct nl_cache* link_cache = NULL;
-    if(rtnl_link_alloc_cache(socket, AF_UNSPEC, &link_cache) < 0) {
-        perror("Could not allocate link cache!");
-        return ERROR;
-    }
-
-    int eth0 = 0;
-    if (!(eth0 = rtnl_link_name2i(link_cache, name))) {
-        perror("Could not find master device!");
-        nl_cache_put(link_cache);
-        return ERROR;
-    }
-
-    nl_cache_put(link_cache);
-    return eth0;
 }
 
 void assign_address(const char* tunnel_name, struct in6_addr* addr) {
@@ -156,7 +157,7 @@ int create_tunnel(struct in6_addr* local, struct in6_addr* remote, struct in6_ad
     nl_connect(socket, NETLINK_ROUTE);
     struct rtnl_link* tunnel = rtnl_link_ip6_tnl_alloc();
 
-    int eth0 = find_ifidx(socket, "eth0");
+    int eth0 = find_ifidx(socket, master_dev);
     if(eth0 < 0) {
         perror("Error finding master device!");
         rtnl_link_put(tunnel);
