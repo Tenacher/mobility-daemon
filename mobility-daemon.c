@@ -10,7 +10,20 @@
 
 const char HA_IPV6[] = "fd84:c300:ca02:76d2::1";
 
-int main() {
+int main(int argc, char* argv[]) {
+    if(argc != 2) {
+        printf("The ip6 address of the host needs to be supplied!\n");
+        return -1;
+    }
+
+    printf("Received address: %s\n", argv[1]);
+    struct in6_addr ha_addr;
+    if(inet_pton(AF_INET6, argv[1], &ha_addr) < 1) {
+        perror("Invalid ip6 address supplied!");
+        return -1;
+    }
+
+
     uint8_t msg[16]; //16bytes for BU with padding
     struct in6_addr CoA;
 
@@ -31,9 +44,9 @@ int main() {
     struct ip6_mh* mh = (struct ip6_mh*) msg;
     struct mh_bu* bu = (struct mh_bu*) mh->payload;
 
-    uint8_t* b_ack = create_binding_ack(bu->sequence);
+    uint8_t* b_ack = create_binding_ack(ntohs(bu->sequence));
 
-    if(send_mo_msg(b_ack, 16, &CoA) < 0) {
+    if(send_mo_msg(b_ack, 16, &CoA, &ha_addr) < 0) {
         perror("Couldn't send ACK!");
         return -1;
     }

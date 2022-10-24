@@ -52,6 +52,6 @@ uint8_t* create_binding_ack(uint16_t sequence);
 
 uint8_t* create_binding_update();
 
-int send_mo_msg(uint8_t* msg, int bytes, struct in6_addr* receiver);
+int send_mo_msg(uint8_t* msg, int bytes, struct in6_addr* receiver, struct in6_addr* sender);
 
 #endif

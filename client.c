@@ -11,8 +11,8 @@
 const char CLIENT_IPV6[] = "fd84:c300:ca02:76d2::2";
 
 int main(int argc, char* argv[]) {
-    if(argc != 2) {
-        printf("The ip6 address of the HA needs to be supplied!");
+    if(argc != 3) {
+        printf("The ip6 address of the HA and host needs to be supplied!\n");
         return -1;
     }
 
@@ -22,19 +22,21 @@ int main(int argc, char* argv[]) {
         perror("Invalid ip6 address supplied!");
         return -1;
     }
-
-    uint8_t msg[16]; //16bytes for B_ACK with padding
+    struct in6_addr h_addr;
+    if(inet_pton(AF_INET6, argv[2], &h_addr) < 1) {
+        perror("Invalid ip6 address supplied!");
+        return -1;
+    }
 
     uint8_t* bu = create_binding_update();
-
-    if(send_mo_msg(bu, 16, &ha_addr) < 0) {
+    if(send_mo_msg(bu, 16, &ha_addr, &h_addr) < 0) {
         perror("Couldn't send BU!");
         free(bu);
         return -1;
     }
-
     free(bu);
 
+    uint8_t msg[16]; //16bytes for B_ACK with padding
     if(sniff_for(B_ACK, msg, &ha_addr) < 0) {
         perror("Packet sniffing failed!");
         return -1;
@@ -42,9 +44,8 @@ int main(int argc, char* argv[]) {
 
     struct ip6_mh* mh = (struct ip6_mh*) msg;
     struct mh_back* b_ack = (struct mh_back*) mh->payload;
-
     if(b_ack->status != BU_ACCEPTED) {
-        printf("Binding Update was not accepted!");
+        printf("Binding Update was not accepted!\n");
         return 0;
     }
 
