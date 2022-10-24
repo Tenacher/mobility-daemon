@@ -10,15 +10,26 @@
 #include <netlink/route/addr.h>
 #include <netlink/route/link/ip6tnl.h>
 
+#include <stdio.h>
+#include <stdbool.h>
+
 #include "tnl-c.h"
 
 const int ERROR = -1;
 const char TUN_NAME[] = "ip6tun0";
 
+struct cb_args {
+    int l_idx;
+    bool found;
+    struct in6_addr* addr;
+};
+
 int receive_i6addrs(struct nl_msg *msg, void *arg) {
+    struct cb_args* find_params = arg;
+
     struct ifaddrmsg* ifaddr = NLMSG_DATA(nlmsg_hdr(msg));
 
-    if(ifaddr->ifa_index != 2) return 0;
+    if(ifaddr->ifa_index != find_params->l_idx || find_params->found) return 0;
 
     struct rtattr* retrta = IFA_RTA(ifaddr);
 
@@ -27,7 +38,8 @@ int receive_i6addrs(struct nl_msg *msg, void *arg) {
     
     while RTA_OK(retrta, attlen) {
         if (retrta->rta_type == IFA_ADDRESS) {
-            memcpy(arg, RTA_DATA(retrta), sizeof(struct in6_addr));
+            find_params->found = true;
+            memcpy(find_params->addr, RTA_DATA(retrta), sizeof(struct in6_addr));
         }
         retrta = RTA_NEXT(retrta, attlen);
     }
@@ -59,17 +71,22 @@ struct in6_addr* find_master_addr() {
 
     memcpy(nlmsg_data(hdr), &addrmsg, sizeof(struct ifaddrmsg));
 
-    struct in6_addr* addr = malloc(sizeof(struct in6_addr));
-    memset(addr, 0, sizeof(struct in6_addr));
+    struct cb_args find_params;
+    find_params.found = false;
+    find_params.l_idx = 2;
+    struct in6_addr* found = malloc(sizeof(struct in6_addr));
+    memset(found, 0, sizeof(struct in6_addr));
+    find_params.addr = found;
+
     nl_send_auto_complete(socket, msg);
     nlmsg_free(msg);
 
-    nl_socket_modify_cb(socket, NL_CB_VALID, NL_CB_CUSTOM, &receive_i6addrs, addr);
+    nl_socket_modify_cb(socket, NL_CB_VALID, NL_CB_CUSTOM, &receive_i6addrs, &find_params);
     nl_recvmsgs_default(socket);
 
     nl_close(socket);
     nl_socket_free(socket);
-    return addr;
+    return found;
 }
 
 /*
