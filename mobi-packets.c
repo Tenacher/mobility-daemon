@@ -61,12 +61,6 @@ int send_mo_msg(uint8_t* msg, int bytes, struct in6_addr* receiver, struct in6_a
         return -1;
     }
 
-    int on = 1;
-    if(setsockopt(sock, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(int)) < 0) {
-        perror("Couldn't set option!");
-        return -1;
-    }
-
     int offset = 4;
     if(setsockopt(sock, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(int)) < 0) {
         perror("Couldn't set option!");
