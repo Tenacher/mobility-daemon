@@ -50,8 +50,16 @@ struct mo_padn {
 */
 uint8_t* create_binding_ack(uint16_t sequence);
 
+/*
+* Returns a byte pointer to the created message.
+* Needs to be freed after use.
+*/
 uint8_t* create_binding_update();
 
+/*
+* Sends the specified mobility message that is bytes long.
+* Sender address is required to bind to a local address.
+*/
 int send_mo_msg(uint8_t* msg, int bytes, struct in6_addr* receiver, struct in6_addr* sender);
 
 #endif

@@ -7,7 +7,9 @@ COPY . .
 RUN gcc -o daemon.out sniffer.h tnl-c.h mobi-packets.h tnl-c.c mobi-packets.c sniffer.c mobility-daemon.c $(pkg-config --cflags --libs libnl-3.0 libnl-route-3.0)
 FROM ubuntu
 COPY --from=build-env /app/daemon.out /app/daemon.out
+COPY ha_entry.sh /app/
 WORKDIR /app
+RUN chmod +x ha_entry.sh
 RUN apt update
 RUN apt install -y libnl-3-200 libnl-route-3-200
-CMD ["sleep", "infinity"] 
+ENTRYPOINT ["./ha_entry.sh"]

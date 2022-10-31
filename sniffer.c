@@ -10,6 +10,10 @@
 
 const int PKT_LEN = 20000;
 
+static inline size_t to_bytes(uint8_t mh_hdrlen) {
+    return (mh_hdrlen + 1) * 8; // https://www.rfc-editor.org/rfc/rfc6275 for more information about the conversion
+}
+
 int sniff_for(MobilityHeaderType mh_type, uint8_t* buffer, struct in6_addr* source) {
     int sock = socket(AF_INET6, SOCK_RAW, IPPROTO_MH);
     if(sock < 0) {
@@ -32,16 +36,12 @@ int sniff_for(MobilityHeaderType mh_type, uint8_t* buffer, struct in6_addr* sour
             return -1;
         }
 
-        //char string_addr[INET6_ADDRSTRLEN];
-        //inet_ntop(AF_INET6, &addr.sin6_addr, string_addr, INET6_ADDRSTRLEN);
-        //printf("%s\n", string_addr);
-
         struct ip6_mh* mh_ptr = (struct ip6_mh*) buf;
         if(mh_ptr->ip6mh_type != mh_type) {
             continue; //not the specified packet
         }
 
-        memcpy(buffer, buf, mh_ptr->ip6mh_hdrlen);
+        memcpy(buffer, buf, to_bytes(mh_ptr->ip6mh_hdrlen));
         memcpy(source, &addr.sin6_addr, sizeof(struct in6_addr));
 
         shutdown(sock, SHUT_RDWR);

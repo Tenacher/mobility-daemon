@@ -69,9 +69,6 @@ int receive_i6addrs(struct nl_msg *msg, void *arg) {
     return 0;
 }
 
-/*
-* Finds the master INET6 address. Returned structure must be freed after use.
-*/
 struct in6_addr* find_master_addr() {
     struct nl_sock* socket = nl_socket_alloc();
     nl_connect(socket, NETLINK_ROUTE);
